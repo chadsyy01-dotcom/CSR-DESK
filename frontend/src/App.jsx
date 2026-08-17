@@ -4,6 +4,7 @@ import Inbox from "./pages/Inbox";
 import Channels from "./pages/Channels";
 import Reports from "./pages/Reports";
 import Agents from "./pages/Agents";
+import Contacts from "./pages/Contacts";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import { useAuth } from "./context/AuthContext";
@@ -23,6 +24,7 @@ function ProtectedShell() {
           <Route path="/channels" element={<Channels />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/agents" element={<Agents />} />
+          <Route path="/contacts" element={<Contacts />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </div>
