@@ -2,9 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { Contact, Conversation } = require("../models");
 const { requireAuth } = require("../middleware/auth");
-
 router.use(requireAuth);
-
 router.get("/", async (req, res) => {
   const contacts = await Contact.findAll({
     include: [{ model: Conversation, attributes: ["id"] }],
@@ -20,5 +18,4 @@ router.get("/", async (req, res) => {
   }));
   res.json(result);
 });
-
 module.exports = router;

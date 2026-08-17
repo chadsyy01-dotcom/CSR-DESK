@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import api from "../api";
-
 export default function Contacts() {
   const [contacts, setContacts] = useState([]);
-
   useEffect(() => {
     api.get("/contacts").then((res) => setContacts(res.data));
   }, []);
-
   return (
     <>
       <div className="topbar">
