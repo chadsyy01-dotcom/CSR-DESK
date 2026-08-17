@@ -14,7 +14,7 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-logo">D</div>
+      <div className="sidebar-logo">CSR</div>
       <div className="sidebar-nav">
         {links.map((link) => (
           <NavLink
