@@ -13,6 +13,7 @@ const inboxesRoutes = require("./routes/inboxes");
 const conversationsRoutes = require("./routes/conversations");
 const messagesRoutes = require("./routes/messages");
 const reportsRoutes = require("./routes/reports");
+const contactsRoutes = require("./routes/contacts");
 const metaRoutes = require("./routes/integrations/meta");
 const difyRoutes = require("./routes/integrations/dify");
 
@@ -39,6 +40,7 @@ app.use("/api/inboxes", inboxesRoutes);
 app.use("/api/conversations", conversationsRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/contacts", contactsRoutes);
 app.use("/api/integrations/meta", metaRoutes);
 app.use("/api/integrations/dify", difyRoutes);
 
