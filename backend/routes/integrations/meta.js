@@ -3,6 +3,7 @@ const router = express.Router();
 const { Inbox, Contact, Conversation, Message } = require("../../models");
 const { getAiReply } = require("../../services/aiAgent");
 const { sendToMeta } = require("../../services/metaSender");
+const axios = require("axios");
 
 // --- Step 1: Webhook verification (Meta calls this once when you set up the webhook URL) ---
 // Configure this same URL in Meta App Dashboard > Webhooks, with the same META_VERIFY_TOKEN.
@@ -66,7 +67,19 @@ async function handleIncoming({ channelType, externalId, text, io }) {
 
   let contact = await Contact.findOne({ where: { externalId } });
   if (!contact) {
-    contact = await Contact.create({ name: `${channelType} user`, externalId });
+    let displayName = `${channelType} user`;
+    if (channelType === "facebook" && inbox.settings?.pageAccessToken) {
+      try {
+        const profile = await axios.get(
+          `https://graph.facebook.com/${externalId}`,
+          { params: { fields: "name", access_token: inbox.settings.pageAccessToken } }
+        );
+        if (profile.data?.name) displayName = profile.data.name;
+      } catch (err) {
+        console.error("Failed to fetch FB profile name:", err.message);
+      }
+    }
+    contact = await Contact.create({ name: displayName, externalId });
   }
 
   let conversation = await Conversation.findOne({
@@ -77,39 +90,4 @@ async function handleIncoming({ channelType, externalId, text, io }) {
   }
 
   const message = await Message.create({
-    conversationId: conversation.id,
-    content: text,
-    senderType: "contact",
-    senderName: contact.name,
-  });
-  conversation.lastMessageAt = new Date();
-  conversation.lastMessagePreview = text.slice(0, 120);
-  await conversation.save();
-
-  io.to(`conversation:${conversation.id}`).emit("new_message", message);
-  io.emit("conversation_updated", conversation);
-  io.emit("new_conversation", conversation);
-
-  const aiConfig = inbox.aiConfig;
-  if (aiConfig?.provider !== "none" && aiConfig?.autoReply) {
-    const aiText = await getAiReply(aiConfig, text, conversation.id);
-    if (aiText) {
-      const botMessage = await Message.create({
-        conversationId: conversation.id,
-        content: aiText,
-        senderType: "bot",
-        senderName: "AI Agent",
-      });
-      conversation.lastMessageAt = new Date();
-      conversation.lastMessagePreview = aiText.slice(0, 120);
-      await conversation.save();
-
-      io.to(`conversation:${conversation.id}`).emit("new_message", botMessage);
-      io.emit("conversation_updated", conversation);
-
-      await sendToMeta(inbox, contact, aiText);
-    }
-  }
-}
-
-module.exports = router;
+    conversationId:
