@@ -53,7 +53,7 @@ export default function Login() {
           D
         </div>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 20, margin: "0 0 4px" }}>
-          Sign in to Desk
+          Sign in to CSR Desk
         </h1>
         <p style={{ color: "var(--muted)", fontSize: 13, margin: "0 0 20px" }}>
           Your support inbox
