@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../api";
 
 const DEFAULT_CFG = {
   brandName: "Chat with us",
-  welcomeText: "Kumusta! Paano ka namin matutulungan ngayon?",
+  welcomeHeading: "Chat with us",
+  welcomeTagline: "<p>Kumusta! Paano ka namin matutulungan ngayon?</p>",
   statusText: "Nandito kami",
   footnoteText: "Karaniwang sumasagot sa loob ng ilang minuto",
   accentColor: "#E8A33D",
@@ -12,6 +13,11 @@ const DEFAULT_CFG = {
   teal: "#5CC8C2",
   position: "bottom-right",
   size: "medium",
+  bubbleType: "standard",
+  enableGreeting: true,
+  enableEmailCollect: false,
+  allowMessagesAfterResolved: true,
+  enableContinuityViaEmail: false,
   chips: [
     { label: "I-track ang order", msg: "Gusto kong i-track ang order ko" },
     { label: "Billing", msg: "May tanong ako tungkol sa billing" },
@@ -24,6 +30,92 @@ const SIZES = {
   medium: { w: 320, h: 440 },
   large: { w: 360, h: 500 },
 };
+
+function ToggleRow({ label, hint, checked, onChange }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 500 }}>{label}</div>
+        {hint && <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>{hint}</div>}
+      </div>
+      <label style={{ position: "relative", display: "inline-block", width: 38, height: 22, flexShrink: 0, marginLeft: 12 }}>
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+        <span
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: checked ? "var(--pine)" : "#3a4149",
+            borderRadius: 999,
+            transition: "background .15s ease",
+            cursor: "pointer",
+          }}
+          onClick={() => onChange(!checked)}
+        >
+          <span
+            style={{
+              position: "absolute",
+              top: 3,
+              left: checked ? 19 : 3,
+              width: 16,
+              height: 16,
+              background: "#fff",
+              borderRadius: "50%",
+              transition: "left .15s ease",
+            }}
+          />
+        </span>
+      </label>
+    </div>
+  );
+}
+
+function RichTextEditor({ html, onChange }) {
+  const ref = useRef(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (ref.current && !initialized.current) {
+      ref.current.innerHTML = html || "";
+      initialized.current = true;
+    }
+  }, [html]);
+
+  const exec = (cmd, value) => {
+    ref.current?.focus();
+    document.execCommand(cmd, false, value);
+    onChange(ref.current.innerHTML);
+  };
+
+  const addLink = () => {
+    const url = window.prompt("URL:");
+    if (url) exec("createLink", url);
+  };
+
+  return (
+    <div style={{ border: "1px solid rgba(255,255,255,.12)", borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ display: "flex", gap: 4, padding: 6, background: "#232B35", borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+        <button type="button" className="btn" style={{ padding: "4px 9px", fontWeight: 700 }} onClick={() => exec("bold")}>
+          B
+        </button>
+        <button type="button" className="btn" style={{ padding: "4px 9px", fontStyle: "italic" }} onClick={() => exec("italic")}>
+          I
+        </button>
+        <button type="button" className="btn" style={{ padding: "4px 9px" }} onClick={addLink}>
+          🔗
+        </button>
+        <button type="button" className="btn" style={{ padding: "4px 9px" }} onClick={() => exec("undo")}>
+          ↺
+        </button>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        onInput={(e) => onChange(e.currentTarget.innerHTML)}
+        style={{ minHeight: 70, padding: "10px 12px", background: "#1B2129", color: "#EDEAE1", fontSize: 13, outline: "none" }}
+      />
+    </div>
+  );
+}
 
 export default function WidgetSettings() {
   const [inboxes, setInboxes] = useState([]);
@@ -61,12 +153,8 @@ export default function WidgetSettings() {
   };
 
   const addChip = () => {
-    setCfg((prev) => ({
-      ...prev,
-      chips: [...prev.chips, { label: "Bagong chip", msg: "" }],
-    }));
+    setCfg((prev) => ({ ...prev, chips: [...prev.chips, { label: "Bagong chip", msg: "" }] }));
   };
-
   const removeChip = (i) => {
     setCfg((prev) => ({ ...prev, chips: prev.chips.filter((_, idx) => idx !== i) }));
   };
@@ -108,82 +196,49 @@ export default function WidgetSettings() {
 
       {inboxId && (
         <div style={{ display: "flex", gap: 24, padding: 20, flexWrap: "wrap" }}>
-          {/* ---- Form ---- */}
-          <div style={{ flex: "1 1 360px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ flex: "1 1 380px", display: "flex", flexDirection: "column", gap: 14 }}>
             <label>
               Brand name
-              <input
-                type="text"
-                value={cfg.brandName}
-                onChange={(e) => set("brandName", e.target.value)}
-                style={inputStyle}
-              />
+              <input type="text" value={cfg.brandName} onChange={(e) => set("brandName", e.target.value)} style={inputStyle} />
             </label>
+
             <label>
-              Welcome text
-              <textarea
-                value={cfg.welcomeText}
-                onChange={(e) => set("welcomeText", e.target.value)}
-                style={{ ...inputStyle, minHeight: 60 }}
-              />
+              Welcome Heading
+              <input type="text" value={cfg.welcomeHeading} onChange={(e) => set("welcomeHeading", e.target.value)} style={inputStyle} />
             </label>
+
+            <div>
+              <div style={{ fontSize: 13, marginBottom: 4 }}>Welcome Tagline</div>
+              <RichTextEditor html={cfg.welcomeTagline} onChange={(html) => set("welcomeTagline", html)} />
+            </div>
+
             <label>
               Status text
-              <input
-                type="text"
-                value={cfg.statusText}
-                onChange={(e) => set("statusText", e.target.value)}
-                style={inputStyle}
-              />
+              <input type="text" value={cfg.statusText} onChange={(e) => set("statusText", e.target.value)} style={inputStyle} />
             </label>
             <label>
               Footnote text
-              <input
-                type="text"
-                value={cfg.footnoteText}
-                onChange={(e) => set("footnoteText", e.target.value)}
-                style={inputStyle}
-              />
+              <input type="text" value={cfg.footnoteText} onChange={(e) => set("footnoteText", e.target.value)} style={inputStyle} />
             </label>
 
             <div style={{ display: "flex", gap: 12 }}>
               <label style={{ flex: 1 }}>
                 Accent color
-                <input
-                  type="color"
-                  value={cfg.accentColor}
-                  onChange={(e) => set("accentColor", e.target.value)}
-                  style={{ ...inputStyle, height: 38, padding: 4 }}
-                />
+                <input type="color" value={cfg.accentColor} onChange={(e) => set("accentColor", e.target.value)} style={{ ...inputStyle, height: 38, padding: 4 }} />
               </label>
               <label style={{ flex: 1 }}>
                 Teal / highlight
-                <input
-                  type="color"
-                  value={cfg.teal}
-                  onChange={(e) => set("teal", e.target.value)}
-                  style={{ ...inputStyle, height: 38, padding: 4 }}
-                />
+                <input type="color" value={cfg.teal} onChange={(e) => set("teal", e.target.value)} style={{ ...inputStyle, height: 38, padding: 4 }} />
               </label>
             </div>
             <div style={{ display: "flex", gap: 12 }}>
               <label style={{ flex: 1 }}>
                 Panel background
-                <input
-                  type="color"
-                  value={cfg.bgColor}
-                  onChange={(e) => set("bgColor", e.target.value)}
-                  style={{ ...inputStyle, height: 38, padding: 4 }}
-                />
+                <input type="color" value={cfg.bgColor} onChange={(e) => set("bgColor", e.target.value)} style={{ ...inputStyle, height: 38, padding: 4 }} />
               </label>
               <label style={{ flex: 1 }}>
                 Messages background
-                <input
-                  type="color"
-                  value={cfg.messagesBgColor}
-                  onChange={(e) => set("messagesBgColor", e.target.value)}
-                  style={{ ...inputStyle, height: 38, padding: 4 }}
-                />
+                <input type="color" value={cfg.messagesBgColor} onChange={(e) => set("messagesBgColor", e.target.value)} style={{ ...inputStyle, height: 38, padding: 4 }} />
               </label>
             </div>
 
@@ -203,26 +258,49 @@ export default function WidgetSettings() {
                   <option value="large">Large</option>
                 </select>
               </label>
+              <label style={{ flex: 1 }}>
+                Bubble Type
+                <select value={cfg.bubbleType} onChange={(e) => set("bubbleType", e.target.value)} style={inputStyle}>
+                  <option value="standard">Standard</option>
+                  <option value="expanded">Expanded</option>
+                </select>
+              </label>
+            </div>
+
+            <div>
+              <div style={{ marginBottom: 4, fontSize: 13, fontWeight: 600 }}>Channel Preferences</div>
+              <ToggleRow
+                label="Enable channel greeting"
+                hint="Auto-send ng welcome message pag nagsimula ng conversation ang customer."
+                checked={cfg.enableGreeting}
+                onChange={(v) => set("enableGreeting", v)}
+              />
+              <ToggleRow
+                label="Enable email collect box"
+                hint="Hihilingin sa customer ang email bago sila makapagsimula. (Kailangan pa ng karagdagang backend wiring.)"
+                checked={cfg.enableEmailCollect}
+                onChange={(v) => set("enableEmailCollect", v)}
+              />
+              <ToggleRow
+                label="Allow messages after conversation resolved"
+                hint="Kapag naka-off, hindi na makakapag-message ang customer kapag naka-'resolved' na ang usapan."
+                checked={cfg.allowMessagesAfterResolved}
+                onChange={(v) => set("allowMessagesAfterResolved", v)}
+              />
+              <ToggleRow
+                label="Enable conversation continuity via email"
+                hint="Magpapatuloy ang usapan sa email kung meron nang email ang contact. (Kailangan pa ng email-sending setup.)"
+                checked={cfg.enableContinuityViaEmail}
+                onChange={(v) => set("enableContinuityViaEmail", v)}
+              />
             </div>
 
             <div>
               <div style={{ marginBottom: 6, fontSize: 13 }}>Quick reply chips</div>
               {cfg.chips.map((c, i) => (
                 <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                  <input
-                    type="text"
-                    placeholder="Label"
-                    value={c.label}
-                    onChange={(e) => setChip(i, "label", e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Message"
-                    value={c.msg}
-                    onChange={(e) => setChip(i, "msg", e.target.value)}
-                    style={{ ...inputStyle, flex: 2 }}
-                  />
+                  <input type="text" placeholder="Label" value={c.label} onChange={(e) => setChip(i, "label", e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+                  <input type="text" placeholder="Message" value={c.msg} onChange={(e) => setChip(i, "msg", e.target.value)} style={{ ...inputStyle, flex: 2 }} />
                   <button className="btn" onClick={() => removeChip(i)}>
                     ✕
                   </button>
@@ -238,7 +316,6 @@ export default function WidgetSettings() {
             </button>
           </div>
 
-          {/* ---- Live preview ---- */}
           <div
             style={{
               flex: "0 0 auto",
@@ -275,48 +352,24 @@ export default function WidgetSettings() {
                     {cfg.statusText}
                   </div>
                 </div>
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: cfg.accentColor,
-                    border: `1px solid ${cfg.accentColor}55`,
-                    borderRadius: 6,
-                    padding: "3px 6px",
-                    height: "fit-content",
-                  }}
-                >
+                <span style={{ fontSize: 10, color: cfg.accentColor, border: `1px solid ${cfg.accentColor}55`, borderRadius: 6, padding: "3px 6px", height: "fit-content" }}>
                   BAGO
                 </span>
               </div>
               <div style={{ flex: 1, background: cfg.messagesBgColor, padding: 14, display: "flex", flexDirection: "column" }}>
-                <div style={{ alignSelf: "flex-start", maxWidth: "85%" }}>
-                  <div style={{ fontSize: 9, color: cfg.teal, marginBottom: 3, textTransform: "uppercase" }}>AI Agent</div>
-                  <div
-                    style={{
-                      background: "#232B35",
-                      color: "#EDEAE1",
-                      padding: "9px 12px",
-                      borderRadius: 12,
-                      borderBottomLeftRadius: 4,
-                      fontSize: 12.5,
-                    }}
-                  >
-                    {cfg.welcomeText}
+                {cfg.enableGreeting && (
+                  <div style={{ alignSelf: "flex-start", maxWidth: "85%" }}>
+                    <div style={{ fontSize: 9, color: cfg.teal, marginBottom: 3, textTransform: "uppercase" }}>AI Agent</div>
+                    <div style={{ background: "#232B35", color: "#EDEAE1", padding: "9px 12px", borderRadius: 12, borderBottomLeftRadius: 4, fontSize: 12.5 }}>
+                      <strong>{cfg.welcomeHeading}</strong>
+                      <div dangerouslySetInnerHTML={{ __html: cfg.welcomeTagline }} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 14px 10px", background: cfg.messagesBgColor }}>
                 {cfg.chips.map((c, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      fontSize: 10.5,
-                      color: cfg.teal,
-                      border: `1px solid ${cfg.teal}55`,
-                      borderRadius: 999,
-                      padding: "4px 9px",
-                    }}
-                  >
+                  <span key={i} style={{ fontSize: 10.5, color: cfg.teal, border: `1px solid ${cfg.teal}55`, borderRadius: 999, padding: "4px 9px" }}>
                     {c.label}
                   </span>
                 ))}
