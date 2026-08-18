@@ -6,7 +6,7 @@ const path = require("path");
 // new Sequelize(process.env.DATABASE_URL, { dialect: "postgres", ... })
 const sequelize = new Sequelize({
   dialect: "sqlite",
-  storage: path.join(__dirname, "data.sqlite"),
+  storage: process.env.SQLITE_PATH || path.join(__dirname, "data.sqlite"),
   logging: false,
 });
 

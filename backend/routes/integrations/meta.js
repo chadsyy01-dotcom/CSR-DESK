@@ -90,4 +90,39 @@ async function handleIncoming({ channelType, externalId, text, io }) {
   }
 
   const message = await Message.create({
-    conversationId:
+    conversationId: conversation.id,
+    content: text,
+    senderType: "contact",
+    senderName: contact.name,
+  });
+  conversation.lastMessageAt = new Date();
+  conversation.lastMessagePreview = text.slice(0, 120);
+  await conversation.save();
+
+  io.to(`conversation:${conversation.id}`).emit("new_message", message);
+  io.emit("conversation_updated", conversation);
+  io.emit("new_conversation", conversation);
+
+  const aiConfig = inbox.aiConfig;
+  if (aiConfig?.provider !== "none" && aiConfig?.autoReply) {
+    const aiText = await getAiReply(aiConfig, text, conversation.id);
+    if (aiText) {
+      const botMessage = await Message.create({
+        conversationId: conversation.id,
+        content: aiText,
+        senderType: "bot",
+        senderName: "AI Agent",
+      });
+      conversation.lastMessageAt = new Date();
+      conversation.lastMessagePreview = aiText.slice(0, 120);
+      await conversation.save();
+
+      io.to(`conversation:${conversation.id}`).emit("new_message", botMessage);
+      io.emit("conversation_updated", conversation);
+
+      await sendToMeta(inbox, contact, aiText);
+    }
+  }
+}
+
+module.exports = router;
