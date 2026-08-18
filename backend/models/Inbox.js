@@ -62,7 +62,8 @@ const Inbox = sequelize.define("Inbox", {
     type: DataTypes.TEXT,
     defaultValue: JSON.stringify({
       brandName: "Chat with us",
-      welcomeText: "Kumusta! Paano ka namin matutulungan ngayon?",
+      welcomeHeading: "Chat with us",
+      welcomeTagline: "<p>Kumusta! Paano ka namin matutulungan ngayon?</p>",
       statusText: "Nandito kami",
       footnoteText: "Karaniwang sumasagot sa loob ng ilang minuto",
       accentColor: "#E8A33D",
@@ -71,6 +72,11 @@ const Inbox = sequelize.define("Inbox", {
       teal: "#5CC8C2",
       position: "bottom-right",
       size: "medium",
+      bubbleType: "standard",
+      enableGreeting: true,
+      enableEmailCollect: false,
+      allowMessagesAfterResolved: true,
+      enableContinuityViaEmail: false,
       chips: [
         { label: "I-track ang order", msg: "Gusto kong i-track ang order ko" },
         { label: "Billing", msg: "May tanong ako tungkol sa billing" },
