@@ -4,8 +4,9 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 
-const { sequelize } = require("./models");
+const { sequelize, Agent } = require("./models");
 const attachSocket = require("./socket");
+const { execSync } = require("child_process");
 
 const authRoutes = require("./routes/auth");
 const agentsRoutes = require("./routes/agents");
@@ -46,7 +47,16 @@ app.use("/api/integrations/dify", difyRoutes);
 
 const PORT = process.env.PORT || 4000;
 
-sequelize.sync().then(() => {
+sequelize.sync().then(async () => {
+  const agentCount = await Agent.count();
+  if (agentCount === 0) {
+    console.log("Empty database detected, running seed...");
+    try {
+      execSync("node seed.js", { stdio: "inherit" });
+    } catch (err) {
+      console.error("Seed failed:", err.message);
+    }
+  }
   server.listen(PORT, () => {
     console.log(`Chatwoot-clone backend running on http://localhost:${PORT}`);
   });
