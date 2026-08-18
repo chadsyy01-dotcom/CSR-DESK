@@ -124,3 +124,5 @@ async function handleIncoming({ channelType, externalId, text, io }) {
     }
   }
 }
+
+module.exports = router;
