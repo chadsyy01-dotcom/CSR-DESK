@@ -10,7 +10,8 @@
 
   var DEFAULT_CFG = {
     brandName: "Chat with us",
-    welcomeText: settings.welcomeText || "Kumusta! Paano ka namin matutulungan ngayon?",
+    welcomeHeading: "Chat with us",
+    welcomeTagline: "<p>Kumusta! Paano ka namin matutulungan ngayon?</p>",
     statusText: "Nandito kami",
     footnoteText: "Karaniwang sumasagot sa loob ng ilang minuto",
     accentColor: "#E8A33D",
@@ -19,6 +20,11 @@
     teal: "#5CC8C2",
     position: "bottom-right",
     size: "medium",
+    bubbleType: "standard",
+    enableGreeting: true,
+    enableEmailCollect: false,
+    allowMessagesAfterResolved: true,
+    enableContinuityViaEmail: false,
     chips: [
       { label: "I-track ang order", msg: "Gusto kong i-track ang order ko" },
       { label: "Billing", msg: "May tanong ako tungkol sa billing" },
@@ -39,13 +45,12 @@
     open: false,
     initialized: false,
     unread: 0,
+    resolved: false,
   };
 
   try {
     state.conversationId = localStorage.getItem(STORAGE_KEY) || null;
-  } catch (e) {
-    /* localStorage unavailable — fine, fresh conversation each visit */
-  }
+  } catch (e) {}
 
   fetch(baseUrl + "/api/public/inboxes/" + inboxId + "/widget-config")
     .then(function (res) {
@@ -59,30 +64,44 @@
       buildWidget(cfg);
     });
 
+  function escapeHtml(str) {
+    var div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
+  }
+
+  function stripHtml(html) {
+    var div = document.createElement("div");
+    div.innerHTML = html == null ? "" : String(html);
+    return div.textContent || "";
+  }
+
   function buildWidget(cfg) {
     var size = SIZES[cfg.size] || SIZES.medium;
     var isLeft = cfg.position === "bottom-left";
     var side = isLeft ? "left" : "right";
+    var isExpanded = cfg.bubbleType === "expanded";
 
-    // ---------- fonts ----------
     var fontLink = document.createElement("link");
     fontLink.rel = "stylesheet";
     fontLink.href =
       "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap";
     document.head.appendChild(fontLink);
 
-    // ---------- styles ----------
     var style = document.createElement("style");
     style.textContent = [
       "#desk-widget-stub{position:fixed;bottom:20px;" + side + ":20px;display:flex;align-items:center;gap:10px;",
-      "background:#12151A;color:#EDEAE1;border:1px solid rgba(237,234,225,.12);border-radius:999px;",
-      "padding:12px 18px 12px 14px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);",
+      "background:#12151A;color:#EDEAE1;border:1px solid rgba(237,234,225,.12);border-radius:" + (isExpanded ? "16px" : "999px") + ";",
+      "padding:" + (isExpanded ? "12px 16px" : "12px 18px 12px 14px") + ";cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.35);",
       "font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:14px;z-index:999999;",
-      "transition:transform .18s ease;border:none;}",
+      "transition:transform .18s ease;border:none;max-width:260px;}",
       "#desk-widget-stub:hover{transform:translateY(-2px);}",
       "#desk-widget-stub:focus-visible{outline:2px solid " + cfg.teal + ";outline-offset:3px;}",
       "#desk-widget-stub .desk-dot{width:9px;height:9px;border-radius:50%;background:" + cfg.teal + ";",
       "animation:desk-pulse 2.2s infinite;flex-shrink:0;}",
+      "#desk-widget-stub-text{display:flex;flex-direction:column;align-items:flex-start;line-height:1.3;}",
+      "#desk-widget-stub-sub{font-family:'Inter',sans-serif;font-weight:400;font-size:11px;color:#A9A79E;",
+      "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}",
       "#desk-widget-stub .desk-unread{background:" + cfg.accentColor + ";color:#1A1305;font-family:'IBM Plex Mono',monospace;",
       "font-size:11px;font-weight:500;border-radius:999px;padding:2px 7px;display:none;}",
       "#desk-widget-stub .desk-unread.show{display:inline-block;}",
@@ -133,6 +152,7 @@
       "color:" + cfg.teal + ";margin-bottom:3px;text-transform:uppercase;}",
       ".desk-msg{padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.5;",
       "animation:desk-rise .2s ease;}",
+      ".desk-msg a{color:inherit;text-decoration:underline;}",
       "@keyframes desk-rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}",
       ".desk-msg.other{background:#232B35;color:#EDEAE1;border-bottom-left-radius:4px;}",
       ".desk-msg.contact{background:" + cfg.accentColor + ";color:#1A1305;border-bottom-right-radius:4px;font-weight:500;}",
@@ -162,6 +182,7 @@
       "border-radius:10px;outline:none;min-width:0;}",
       "#desk-widget-input::placeholder{color:#6B7280;}",
       "#desk-widget-input:focus{border-color:" + cfg.teal + ";}",
+      "#desk-widget-input:disabled{opacity:.5;}",
       "#desk-widget-send{background:" + cfg.accentColor + ";border:none;width:36px;height:36px;border-radius:10px;",
       "display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}",
       "#desk-widget-send:hover{filter:brightness(1.08);}",
@@ -175,13 +196,18 @@
     ].join("");
     document.head.appendChild(style);
 
-    // ---------- markup ----------
     var stub = document.createElement("button");
     stub.id = "desk-widget-stub";
     stub.setAttribute("aria-haspopup", "dialog");
     stub.setAttribute("aria-expanded", "false");
     stub.innerHTML =
-      '<span class="desk-dot"></span>Suporta<span class="desk-unread" id="desk-widget-unread">1</span>';
+      '<span class="desk-dot"></span>' +
+      '<span id="desk-widget-stub-text">Suporta' +
+      (isExpanded
+        ? '<span id="desk-widget-stub-sub">' + escapeHtml(stripHtml(cfg.welcomeTagline).slice(0, 40)) + "</span>"
+        : "") +
+      "</span>" +
+      '<span class="desk-unread" id="desk-widget-unread">1</span>';
     document.body.appendChild(stub);
 
     var panel = document.createElement("div");
@@ -222,13 +248,6 @@
     var chipsEl = panel.querySelector("#desk-widget-chips");
     var unreadEl = stub.querySelector("#desk-widget-unread");
 
-    function escapeHtml(str) {
-      var div = document.createElement("div");
-      div.textContent = str == null ? "" : String(str);
-      return div.innerHTML;
-    }
-
-    // ---------- helpers ----------
     function formatTime(dateStr) {
       var d = dateStr ? new Date(dateStr) : new Date();
       return d.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" });
@@ -248,7 +267,11 @@
 
       var bubble = document.createElement("div");
       bubble.className = "desk-msg " + (isContact ? "contact" : "other");
-      bubble.textContent = msg.content;
+      if (msg.isHtml) {
+        bubble.innerHTML = msg.content;
+      } else {
+        bubble.textContent = msg.content;
+      }
       wrap.appendChild(bubble);
 
       var time = document.createElement("span");
@@ -258,6 +281,13 @@
 
       messagesEl.appendChild(wrap);
       messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function appendWelcome() {
+      var html =
+        (cfg.welcomeHeading ? "<strong>" + escapeHtml(cfg.welcomeHeading) + "</strong><br/>" : "") +
+        (cfg.welcomeTagline || "");
+      appendMessage({ content: html, senderType: "bot", senderName: "AI Agent", isHtml: true });
     }
 
     function showTyping() {
@@ -277,7 +307,14 @@
       ticketEl.textContent = "#" + id.slice(0, 8).toUpperCase();
     }
 
-    // ---------- open/close ----------
+    function lockComposer(message) {
+      inputEl.disabled = true;
+      inputEl.placeholder = message || "Sarado ang chat na ito.";
+      var sendBtn = formEl.querySelector("#desk-widget-send");
+      sendBtn.style.opacity = ".4";
+      sendBtn.style.pointerEvents = "none";
+    }
+
     function openPanel() {
       state.open = true;
       panel.classList.add("open");
@@ -297,11 +334,10 @@
     });
     panel.querySelector("#desk-widget-close").addEventListener("click", closePanel);
 
-    // ---------- backend wiring ----------
     function init() {
       state.initialized = true;
       if (!state.conversationId) {
-        appendMessage({ content: cfg.welcomeText, senderType: "bot", senderName: "AI Agent" });
+        if (cfg.enableGreeting) appendWelcome();
       } else {
         setTicket(state.conversationId);
       }
@@ -364,13 +400,19 @@
       state.socket.emit("join_conversation", state.conversationId);
       state.socket.on("new_message", function (msg) {
         if (msg.conversationId !== state.conversationId) return;
-        if (msg.senderType === "contact") return; // already shown optimistically
+        if (msg.senderType === "contact") return;
         hideTyping();
         appendMessage(msg);
         if (!state.open) {
           state.unread += 1;
           unreadEl.textContent = state.unread;
           unreadEl.classList.add("show");
+        }
+      });
+      state.socket.on("conversation_updated", function (conv) {
+        if (conv.id !== state.conversationId) return;
+        if (conv.status === "resolved" && !cfg.allowMessagesAfterResolved) {
+          lockComposer("Nasarado na ang usapang ito.");
         }
       });
     }
@@ -384,9 +426,23 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content: text, senderType: "contact" }),
-        }).catch(function () {
-          hideTyping();
-        });
+        })
+          .then(function (res) {
+            if (!res.ok) {
+              return res.json().then(function (body) {
+                hideTyping();
+                appendMessage({
+                  content: body.message || "Hindi maipadala ang mensahe.",
+                  senderType: "bot",
+                  senderName: "System",
+                });
+                if (body.error === "resolved") lockComposer(body.message);
+              });
+            }
+          })
+          .catch(function () {
+            hideTyping();
+          });
       });
     }
 
