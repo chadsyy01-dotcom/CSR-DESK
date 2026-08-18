@@ -5,6 +5,7 @@ const links = [
   { to: "/contacts", label: "Contacts", icon: "👥" },
   { to: "/archives", label: "Archives", icon: "🗄️" },
   { to: "/channels", label: "Channels", icon: "🔌" },
+  { to: "/widget-settings", label: "Widget Settings", icon: "🎨" },
   { to: "/reports", label: "Reports", icon: "📊" },
   { to: "/agents", label: "Agents", icon: "👤" },
   { to: "/settings", label: "Settings", icon: "⚙️" },
