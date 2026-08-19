@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-const API_URL = 'https://csr-desk-production.up.railway.app/api';
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,16 +15,9 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      // Call backend login
-      const response = await axios.post(`${API_URL}/auth/login`, {
-        email,
-        password
-      });
-
-      // Save token to localStorage
-      const { token } = response.data;
-      localStorage.setItem('authToken', token);
-      console.log('Token saved:', token);
+      // Use the shared AuthContext login so token state/localStorage/api headers
+      // all stay in sync (single source of truth: "desk_token").
+      await login(email, password);
 
       // Redirect to home
       navigate("/");
