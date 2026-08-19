@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import axios from "axios";
+
+const API_URL = 'https://csr-desk-production.up.railway.app/api';
 
 export default function Login() {
-  const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
@@ -15,9 +16,21 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
-      await login(email, password);
+      // Call backend login
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password
+      });
+
+      // Save token to localStorage
+      const { token } = response.data;
+      localStorage.setItem('authToken', token);
+      console.log('Token saved:', token);
+
+      // Redirect to home
       navigate("/");
     } catch (err) {
+      console.error('Login error:', err.response);
       setError(err.response?.data?.error || "Login failed");
     } finally {
       setBusy(false);
