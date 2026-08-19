@@ -12,7 +12,7 @@ const CSRDesk = () => {
   const API_URL = 'https://csr-desk-production.up.railway.app/api';
 
   const getHeaders = () => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('desk_token');
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
