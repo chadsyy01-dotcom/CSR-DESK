@@ -1,8 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-// Use environment variable or default
-const API_URL = import.meta.env.VITE_API_URL || 'https://csr-desk-production.up.railway.app/api';
 
 const CSRDesk = () => {
   const [activeConversation, setActiveConversation] = useState(null);
@@ -13,14 +9,14 @@ const CSRDesk = () => {
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState(null);
 
-  // Create axios instance with auth
-  const getApi = () => {
-    return axios.create({
-      baseURL: API_URL,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      }
-    });
+  const API_URL = 'https://csr-desk-production.up.railway.app/api';
+
+  const getHeaders = () => {
+    const token = localStorage.getItem('authToken');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
   };
 
   // Fetch conversations on mount
@@ -30,32 +26,48 @@ const CSRDesk = () => {
 
   const fetchConversations = async () => {
     try {
-      const api = getApi();
-      const response = await api.get('/conversations');
-      console.log('Conversations loaded:', response.data);
-      setConversations(response.data);
+      console.log('Fetching from:', `${API_URL}/conversations`);
+      const response = await fetch(`${API_URL}/conversations`, {
+        headers: getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Conversations:', data);
+      setConversations(data);
       setError(null);
-      if (response.data.length > 0) {
-        setActiveConversation(response.data[0].id);
-        fetchMessages(response.data[0].id);
-        setCustomer(response.data[0].contact);
+      
+      if (data.length > 0) {
+        setActiveConversation(data[0].id);
+        fetchMessages(data[0].id);
+        setCustomer(data[0].contact);
       }
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching conversations:', error.response?.data || error.message);
-      setError('Failed to load conversations');
+      console.error('Error:', error);
+      setError(error.message);
       setLoading(false);
     }
   };
 
   const fetchMessages = async (conversationId) => {
     try {
-      const api = getApi();
-      const response = await api.get(`/messages?conversationId=${conversationId}`);
-      console.log('Messages loaded:', response.data);
-      setMessages(response.data);
+      const response = await fetch(`${API_URL}/messages?conversationId=${conversationId}`, {
+        headers: getHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Messages:', data);
+      setMessages(data);
     } catch (error) {
-      console.error('Error fetching messages:', error.response?.data || error.message);
+      console.error('Error fetching messages:', error);
     }
   };
 
@@ -69,16 +81,24 @@ const CSRDesk = () => {
     if (!newMessage.trim() || !activeConversation) return;
 
     try {
-      const api = getApi();
-      await api.post('/messages', {
-        conversationId: activeConversation,
-        content: newMessage,
-        senderType: 'agent'
+      const response = await fetch(`${API_URL}/messages`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          conversationId: activeConversation,
+          content: newMessage,
+          senderType: 'agent'
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
       setNewMessage('');
       fetchMessages(activeConversation);
     } catch (error) {
-      console.error('Error sending message:', error.response?.data || error.message);
+      console.error('Error sending message:', error);
       setError('Failed to send message');
     }
   };
@@ -116,7 +136,7 @@ const CSRDesk = () => {
         {/* Conversations */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {conversations.length === 0 ? (
-            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '12px' }}>No conversations yet</div>
+            <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '12px' }}>No conversations</div>
           ) : (
             conversations.map(conv => (
               <div
@@ -144,15 +164,12 @@ const CSRDesk = () => {
                     fontSize: '12px',
                     fontWeight: '500',
                     color: 'var(--text-accent)',
-                    position: 'relative',
                     flexShrink: 0
                   }}>
                     {conv.contact?.name?.substring(0, 2).toUpperCase() || 'C'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{conv.contact?.name || 'Unknown'}</span>
-                    </div>
+                    <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{conv.contact?.name || 'Unknown'}</span>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{conv.lastMessagePreview || 'No messages'}</div>
                   </div>
                 </div>
@@ -267,26 +284,6 @@ const CSRDesk = () => {
 
         {/* Input Area */}
         <div style={{ padding: '12px 20px', borderTop: '0.5px solid var(--border)', background: 'var(--surface-1)' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-            <button style={{
-              padding: '4px 8px',
-              fontSize: '11px',
-              border: '0.5px solid var(--border)',
-              borderRadius: '4px',
-              background: 'var(--surface-2)',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)'
-            }}>Quick reply</button>
-            <button style={{
-              padding: '4px 8px',
-              fontSize: '11px',
-              border: '0.5px solid var(--border)',
-              borderRadius: '4px',
-              background: 'var(--surface-2)',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)'
-            }}>Attach</button>
-          </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <textarea
               value={newMessage}
@@ -297,7 +294,7 @@ const CSRDesk = () => {
                   handleSendMessage();
                 }
               }}
-              placeholder="Type your message... (Shift+Enter for new line)"
+              placeholder="Type your message..."
               style={{
                 flex: 1,
                 padding: '8px 12px',
@@ -329,7 +326,7 @@ const CSRDesk = () => {
         </div>
       </div>
 
-      {/* Right Sidebar - Customer Info */}
+      {/* Right Sidebar */}
       <div style={{ width: '320px', borderLeft: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'var(--surface-1)' }}>
         <div style={{ padding: '16px', borderBottom: '0.5px solid var(--border)' }}>
           <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Customer info</h3>
@@ -337,8 +334,7 @@ const CSRDesk = () => {
             <div style={{
               padding: '12px',
               background: 'var(--surface-2)',
-              borderRadius: '8px',
-              marginBottom: '12px'
+              borderRadius: '8px'
             }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
                 <div style={{
@@ -360,40 +356,9 @@ const CSRDesk = () => {
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {customer.email && <p style={{ margin: '4px 0' }}>📧 {customer.email}</p>}
-                {customer.phone && <p style={{ margin: '4px 0' }}>📱 {customer.phone}</p>}
               </div>
             </div>
           )}
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '500', color: 'var(--text-secondary)' }}>Conversation info</h4>
-          {activeConversation && (
-            <div style={{
-              padding: '8px',
-              background: 'var(--surface-2)',
-              borderRadius: '6px',
-              marginBottom: '6px',
-              fontSize: '12px'
-            }}>
-              <p style={{ margin: 0, fontWeight: '500', color: 'var(--text-primary)' }}>Status: Open</p>
-              <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)', fontSize: '11px' }}>{messages.length} messages</p>
-            </div>
-          )}
-        </div>
-
-        <div style={{ padding: '12px 16px', borderTop: '0.5px solid var(--border)' }}>
-          <button style={{
-            width: '100%',
-            padding: '8px',
-            background: 'var(--fill-accent)',
-            color: 'var(--on-accent)',
-            border: 'none',
-            borderRadius: 'var(--radius)',
-            cursor: 'pointer',
-            fontWeight: '500',
-            fontSize: '12px'
-          }}>View full profile</button>
         </div>
       </div>
     </div>
