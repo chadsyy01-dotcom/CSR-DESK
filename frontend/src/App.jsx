@@ -1,12 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
-import Inbox from "./pages/Inbox";
-import Channels from "./pages/Channels";
-import Reports from "./pages/Reports";
-import Agents from "./pages/Agents";
-import Contacts from "./pages/Contacts";
-import Archives from "./pages/Archives";
-import Settings from "./pages/Settings";
+import CSRDesk from "./components/CSRDesk";
 import Login from "./pages/Login";
 import { useAuth } from "./context/AuthContext";
 
@@ -16,22 +9,7 @@ function ProtectedShell() {
   if (loading) return null;
   if (!token) return <Navigate to="/login" replace />;
 
-  return (
-    <div className="app-shell">
-      <Sidebar />
-      <div className="main-area">
-        <Routes>
-          <Route path="/" element={<Inbox />} />
-          <Route path="/channels" element={<Channels />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/agents" element={<Agents />} />
-          <Route path="/contacts" element={<Contacts />} />
-          <Route path="/archives" element={<Archives />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </div>
-    </div>
-  );
+  return <CSRDesk />;
 }
 
 export default function App() {

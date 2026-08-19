@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,9 +15,14 @@ export default function Login() {
     setError("");
     setBusy(true);
     try {
+      // Use the shared AuthContext login so token state/localStorage/api headers
+      // all stay in sync (single source of truth: "desk_token").
       await login(email, password);
+
+      // Redirect to home
       navigate("/");
     } catch (err) {
+      console.error('Login error:', err.response);
       setError(err.response?.data?.error || "Login failed");
     } finally {
       setBusy(false);

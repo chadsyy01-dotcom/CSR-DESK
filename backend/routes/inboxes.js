@@ -32,7 +32,7 @@ router.get("/:id", async (req, res) => {
   res.json(inbox);
 });
 
-// PATCH update inbox settings (also used for connecting Meta credentials, toggling AI agent)
+// PATCH update inbox settings (also used for connecting Meta credentials, toggling AI agent, widget appearance)
 router.patch("/:id", async (req, res) => {
   const inbox = await Inbox.findByPk(req.params.id);
   if (!inbox) return res.status(404).json({ error: "Inbox not found" });
@@ -40,6 +40,7 @@ router.patch("/:id", async (req, res) => {
   if (req.body.name) updates.name = req.body.name;
   if (req.body.settings) updates.settings = { ...inbox.settings, ...req.body.settings };
   if (req.body.aiConfig) updates.aiConfig = { ...inbox.aiConfig, ...req.body.aiConfig };
+  if (req.body.widgetConfig) updates.widgetConfig = { ...inbox.widgetConfig, ...req.body.widgetConfig };
   await inbox.update(updates);
   res.json(inbox);
 });

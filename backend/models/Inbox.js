@@ -57,6 +57,44 @@ const Inbox = sequelize.define("Inbox", {
       this.setDataValue("aiConfig", JSON.stringify(value || {}));
     },
   },
+  // Widget appearance config: colors, text, position, size — editable from the dashboard
+  widgetConfig: {
+    type: DataTypes.TEXT,
+    defaultValue: JSON.stringify({
+      brandName: "Chat with us",
+      welcomeHeading: "Chat with us",
+      welcomeTagline: "<p>Kumusta! Paano ka namin matutulungan ngayon?</p>",
+      statusText: "Nandito kami",
+      footnoteText: "Karaniwang sumasagot sa loob ng ilang minuto",
+      accentColor: "#E8A33D",
+      bgColor: "#1B2129",
+      messagesBgColor: "#12151A",
+      teal: "#5CC8C2",
+      position: "bottom-right",
+      size: "medium",
+      bubbleType: "standard",
+      enableGreeting: true,
+      enableEmailCollect: false,
+      allowMessagesAfterResolved: true,
+      enableContinuityViaEmail: false,
+      chips: [
+        { label: "I-track ang order", msg: "Gusto kong i-track ang order ko" },
+        { label: "Billing", msg: "May tanong ako tungkol sa billing" },
+        { label: "Mag-report ng issue", msg: "May issue akong na-encounter" },
+      ],
+    }),
+    get() {
+      const raw = this.getDataValue("widgetConfig");
+      try {
+        return JSON.parse(raw || "{}");
+      } catch {
+        return {};
+      }
+    },
+    set(value) {
+      this.setDataValue("widgetConfig", JSON.stringify(value || {}));
+    },
+  },
 });
 
 module.exports = Inbox;
