@@ -55,7 +55,7 @@ const CSRDesk = () => {
 
   const fetchMessages = async (conversationId) => {
     try {
-      const response = await fetch(`${API_URL}/messages?conversationId=${conversationId}`, {
+      const response = await fetch(`${API_URL}/messages/conversation/${conversationId}`, {
         headers: getHeaders()
       });
       
@@ -81,11 +81,10 @@ const CSRDesk = () => {
     if (!newMessage.trim() || !activeConversation) return;
 
     try {
-      const response = await fetch(`${API_URL}/messages`, {
+      const response = await fetch(`${API_URL}/messages/conversation/${activeConversation}`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
-          conversationId: activeConversation,
           content: newMessage,
           senderType: 'agent'
         })
